@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// This file contains a class definition "RegisterUseCollector" which is used for
+// This file contains a class definition "RegisterUsesCollector" which is used for
 // collecting register used by previous instructions for each machine instruction.
 //
 // RegAlloc can use this information to guarantee RegAlloc will not assign definition
@@ -30,7 +30,7 @@ namespace llvm {
 /// This is analysis pass for collecting register uses.
 /// This pass must run after all requried passes by RegAlloca.
 /// @author JianpingZeng.
-class RegisterUseCollector : public MachineFunctionPass {
+class RegisterUsesCollector : public MachineFunctionPass {
 public:
   typedef std::map<MachineInstr*, SmallBitVector> RegUses;
 
@@ -38,7 +38,7 @@ public:
 
   RegUses UseIns, UseOuts;
 
-  RegisterUseCollector() : MachineFunctionPass(ID) {}
+  RegisterUsesCollector() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override
   { return "Register uses information collector"; }

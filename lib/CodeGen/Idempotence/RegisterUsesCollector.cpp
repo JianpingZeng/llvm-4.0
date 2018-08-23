@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// This file contains a class definition "RegisterUseCollector" which is used for
+// This file contains a class definition "RegisterUsesCollector" which is used for
 // collecting register used by previous instructions for each machine instruction.
 //
 // RegAlloc can use this information to guarantee RegAlloc will not assign definition
@@ -26,14 +26,14 @@
 
 using namespace llvm;
 
-char RegisterUseCollector::ID = 0;
+char RegisterUsesCollector::ID = 0;
 
 /// Register this pass and initialize PassInfo.
-char &llvm::RegisterUseCollectorID = RegisterUseCollector::ID;
-INITIALIZE_PASS(RegisterUseCollector, "reguse-collector",
+char &llvm::RegisterUseCollectorID = RegisterUsesCollector::ID;
+INITIALIZE_PASS(RegisterUsesCollector, "reguse-collector",
                 "Register Use Collector", false, false)
 
-bool RegisterUseCollector::runOnMachineFunction(llvm::MachineFunction &MF) {
+bool RegisterUsesCollector::runOnMachineFunction(llvm::MachineFunction &MF) {
   MachineBasicBlock* entry = &MF.front();
 
   std::vector<MachineBasicBlock*> res;
@@ -94,13 +94,13 @@ bool RegisterUseCollector::runOnMachineFunction(llvm::MachineFunction &MF) {
   return false;
 }
 
-void RegisterUseCollector::reversePostOrder(MachineBasicBlock* entry,
+void RegisterUsesCollector::reversePostOrder(MachineBasicBlock* entry,
                       std::vector<MachineBasicBlock*> &res) {
   std::set<MachineBasicBlock*> visited;
   traverse(entry, res, visited);
   std::reverse(res.begin(), res.end());
 }
-void RegisterUseCollector::traverse(MachineBasicBlock* entry,
+void RegisterUsesCollector::traverse(MachineBasicBlock* entry,
               std::vector<MachineBasicBlock*> &res,
               std::set<MachineBasicBlock*> &visited) {
   if (!entry || visited.count(entry)) return;
@@ -116,7 +116,7 @@ void RegisterUseCollector::traverse(MachineBasicBlock* entry,
   res.push_back(entry);
 }
 
-void RegisterUseCollector::computeLocalDefUses(MachineInstr* mi,
+void RegisterUsesCollector::computeLocalDefUses(MachineInstr* mi,
                          SmallBitVector& defs,
                          SmallBitVector &uses) {
   unsigned i = 0, size = mi->getNumOperands();
@@ -136,7 +136,7 @@ void RegisterUseCollector::computeLocalDefUses(MachineInstr* mi,
  * @param lhs
  * @param rhs
  */
-void RegisterUseCollector::intersect(SmallBitVector &res,
+void RegisterUsesCollector::intersect(SmallBitVector &res,
                                      SmallBitVector &lhs,
                                      SmallBitVector &rhs) {
   for (int start = lhs.find_first();
@@ -148,7 +148,7 @@ void RegisterUseCollector::intersect(SmallBitVector &res,
   }
 }
 
-void RegisterUseCollector::Union(SmallBitVector &lhs,
+void RegisterUsesCollector::Union(SmallBitVector &lhs,
                                  SmallBitVector &rhs) {
   for (int start = rhs.find_first();
        start >= 0;

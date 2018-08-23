@@ -440,6 +440,7 @@ INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
 INITIALIZE_PASS_DEPENDENCY(SpillPlacement)
+INITIALIZE_PASS_DEPENDENCY(RegisterUsesCollector)
 INITIALIZE_PASS_END(RAGreedy, "greedy",
                 "Greedy Register Allocator", false, false)
 
@@ -491,7 +492,7 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveRegMatrix>();
   AU.addRequired<EdgeBundles>();
   AU.addRequired<SpillPlacement>();
-  AU.addRequired<RegisterUseCollector>();
+  AU.addRequired<RegisterUsesCollector>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

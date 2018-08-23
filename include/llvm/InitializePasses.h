@@ -357,9 +357,7 @@ void initializeWinEHPreparePass(PassRegistry&);
 void initializeWriteBitcodePassPass(PassRegistry &);
 void initializeWriteThinLTOBitcodePass(PassRegistry &);
 void initializeXRayInstrumentationPass(PassRegistry &);
-
-/// Added by Jianping Zeng on 8/22/2018.
-void initializeRegisterUseCollectorPass(PassRegistry &);
+void initializeRegisterUsesCollectorPass(PassRegistry &);
 }
 
 #endif
