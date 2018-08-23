@@ -45,50 +45,50 @@ bool RegisterUsesCollector::runOnMachineFunction(llvm::MachineFunction &MF) {
     auto mi = mbb->begin();
     auto end = mbb->end();
 
-    // we don't handle pseudo instr.
-    if (mi->isPseudo())
-      continue;
-
     // 	add	r0, r0, r1  (def r0, use r0, r1)
     //	add	r0, r0, #1  ()
     //	mov	pc, lr
-    SmallBitVector uses, defs;
-    computeLocalDefUses(&*mi, defs, uses);
+
+    // Dataflow equation as follows.
+    // UseIn = U(UseOut_pred) U localUses
+    // UseOut = UseIn - localDefs.
+    SmallBitVector localUses, localDefs;
+    computeLocalDefUses(&*mi, localDefs, localUses);
 
     // Specially handle first instr.
     if (mbb->pred_empty()) {
-      // UseIn = empty set
-      // UseOut = LocalUse
-      UseOuts[&*mi] = uses;
+      // UseIn = localUses
+      // UseOut = UseIn - localDefs.
+      UseIns[&*mi] = localUses;
+      intersect(UseOuts[&*mi], localUses, localDefs);
     }
     else {
-      // UseIn = Union (predecessor's UseOut)
-      // UseOut = (UseIn - LocalDef) U localUse.
-      SmallBitVector useIn;
+      // set up UseIn for current machine instr.
+      SmallBitVector &useIn = UseIns[&*mi];
       auto pred = mbb->pred_begin();
       auto end = mbb->pred_end();
       MachineInstr* last = &*(*pred)->getLastNonDebugInstr();
-      Union(useIn, UseOuts[last]);
+      Union(useIn, useIn, UseOuts[last]);
       ++pred;
       for (; pred != end; ++pred) {
         last = &*(*pred)->getLastNonDebugInstr();
-        Union(useIn, UseOuts[last]);
+        Union(useIn, useIn, UseOuts[last]);
       }
+      Union(useIn, useIn, localUses);
+
+      // setup UseOut for mi.
       SmallBitVector &useOut = UseOuts[&*mi];
-      intersect(useOut, useIn, defs);
-      Union(useOut, uses);
+      intersect(useOut, useIn, localDefs);
     }
 
     ++mi;
     for (; mi != end; ++mi) {
 
-      // UseIn = Union(predecessor UseOut).
-      // UseOut = (UseIn - LocalDef) U localUse.
-      SmallBitVector useIn = UseOuts[(&*mi) - 1], useOut;
-      UseOuts[&*mi] = useIn;
-      intersect(useOut, useIn, defs);
-      Union(useOut, uses);
-      UseOuts[&*mi] = useOut;
+      // UseIn = U(UseOut_pred) U localUses
+      // UseOut = UseIn - localDefs.
+      SmallBitVector &useIn = UseOuts[&*mi];
+      Union(useIn, UseOuts[(&*mi) - 1], localUses);
+      intersect(UseOuts[&*mi], useIn, localDefs);
     }
   }
   return false;
@@ -148,12 +148,13 @@ void RegisterUsesCollector::intersect(SmallBitVector &res,
   }
 }
 
-void RegisterUsesCollector::Union(SmallBitVector &lhs,
-                                 SmallBitVector &rhs) {
+void RegisterUsesCollector::Union(SmallBitVector &res,
+                                  SmallBitVector &lhs,
+                                  SmallBitVector &rhs) {
   for (int start = rhs.find_first();
        start >= 0;
        start = rhs.find_next(start)) {
 
-    lhs[start] = true;
+    res[start] = true;
   }
 }

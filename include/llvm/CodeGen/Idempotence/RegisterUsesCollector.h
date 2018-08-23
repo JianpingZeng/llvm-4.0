@@ -68,7 +68,7 @@ private:
    * @param rhs
    */
   void intersect(SmallBitVector &res, SmallBitVector &lhs, SmallBitVector &rhs);
-  void Union(SmallBitVector &lhs, SmallBitVector &rhs);
+  void Union(SmallBitVector &res, SmallBitVector &lhs, SmallBitVector &rhs);
 };
 }
 
