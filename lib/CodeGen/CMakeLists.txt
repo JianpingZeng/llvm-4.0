@@ -142,6 +142,8 @@ add_llvm_library(LLVMCodeGen
   VirtRegMap.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
+# Add this director for our idempotent region construction algortihm.
+        Idempotence/RegisterUsesCollector.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen

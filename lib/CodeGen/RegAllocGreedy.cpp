@@ -47,6 +47,7 @@
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <queue>
+#include <llvm/CodeGen/Idempotence/RegisterUsesCollector.h>
 
 using namespace llvm;
 
@@ -490,6 +491,7 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveRegMatrix>();
   AU.addRequired<EdgeBundles>();
   AU.addRequired<SpillPlacement>();
+  AU.addRequired<RegisterUseCollector>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
