@@ -2280,6 +2280,15 @@ unsigned RAGreedy::selectOrSplit(LiveInterval &VirtReg,
                     "depth for recoloring reached. Use "
                     "-fexhaustive-register-search to skip cutoffs");
   }
+
+#define IDEMPOTENCE
+#ifdef IDEMPOTENCE
+  // Commented by Jianping Zeng on 8/23/2018
+  if (constraintOnAntiDep(Reg, VirtReg)) {
+    llvm::outs()<<"Can't allocate a physical caused by anti-dep.\n";
+    Reg = 0;
+  }
+#endif
   return Reg;
 }
 

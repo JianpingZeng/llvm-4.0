@@ -18,6 +18,7 @@
 #include <llvm/CodeGen/Passes.h>
 #include <llvm/PassSupport.h>
 #include <llvm/CodeGen/MachineFunctionPass.h>
+#include <llvm/CodeGen/VirtRegMap.h>
 #include <llvm/ADT/SmallBitVector.h>
 #include <set>
 #include <map>
@@ -49,6 +50,11 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  bool isPhyRegUsedBeforeMI(MachineInstr *mi,
+                            int phyReg,
+                            VirtRegMap *vrm,
+                            const TargetRegisterInfo *tri);
 
 private:
   void reversePostOrder(MachineBasicBlock* entry,

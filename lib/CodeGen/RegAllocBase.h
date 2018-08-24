@@ -37,6 +37,7 @@
 #ifndef LLVM_LIB_CODEGEN_REGALLOCBASE_H
 #define LLVM_LIB_CODEGEN_REGALLOCBASE_H
 
+#include <llvm/CodeGen/Idempotence/RegisterUsesCollector.h>
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 
@@ -70,6 +71,9 @@ protected:
   /// postponed till all the allocations are done, so its remat expr is
   /// always available for the remat of all the siblings of the original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
+
+  // Commented by Jianping Zeng on 8/23/2018.
+  RegisterUsesCollector *regUsesCollector;
 
   RegAllocBase()
     : TRI(nullptr), MRI(nullptr), VRM(nullptr), LIS(nullptr), Matrix(nullptr) {}
@@ -109,6 +113,21 @@ protected:
 
   /// Method called when the allocator is about to remove a LiveInterval.
   virtual void aboutToRemoveInterval(LiveInterval &LI) {}
+
+  /// Checks if we should use the specified physical register on
+/// constraint assigned physical register can't be same as one assigned to
+/// previous uses.
+  bool constraintOnAntiDep(int phyReg, LiveInterval &li) {
+    auto itr = li.vni_begin();
+    auto end = li.vni_end();
+    for (; itr != end; ++itr) {
+      VNInfo *vi = *itr;
+      MachineInstr *mi = LIS->getInstructionFromIndex(vi->def.getBaseIndex());
+      if (mi != nullptr && regUsesCollector->isPhyRegUsedBeforeMI(mi, phyReg, VRM, TRI))
+        return true;
+    }
+    return false;
+  }
 
 public:
   /// VerifyEnabled - True when -verify-regalloc is given.

@@ -158,3 +158,25 @@ void RegisterUsesCollector::Union(SmallBitVector &res,
     res[start] = true;
   }
 }
+/**
+ * Checks if phyReg is used by previous physical register assigned to
+ * previous used virtual register.
+ * @param mi
+ * @param phyReg
+ * @param vrm
+ * @param tri
+ * @return
+ */
+bool RegisterUsesCollector::isPhyRegUsedBeforeMI(MachineInstr *mi,
+                                                 int phyReg,
+                                                 VirtRegMap *vrm,
+                                                 const TargetRegisterInfo *tri) {
+  if (UseIns[mi].empty())
+    return false;
+  SmallBitVector &useIns = UseIns[mi];
+  for(int idx = useIns.find_first(); idx >= 0; idx = useIns.find_next(idx)) {
+    int reg = tri->isPhysicalRegister(idx) ? idx : vrm->getPhys(idx);
+    if (reg == phyReg) return true;
+  }
+  return false;
+}
