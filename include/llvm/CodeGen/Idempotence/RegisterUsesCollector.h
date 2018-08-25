@@ -19,7 +19,6 @@
 #include <llvm/PassSupport.h>
 #include <llvm/CodeGen/MachineFunctionPass.h>
 #include <llvm/CodeGen/VirtRegMap.h>
-#include <llvm/ADT/SmallBitVector.h>
 #include <set>
 #include <map>
 #include <vector>
@@ -33,11 +32,14 @@ namespace llvm {
 /// @author JianpingZeng.
 class RegisterUsesCollector : public MachineFunctionPass {
 public:
-  typedef std::map<MachineInstr*, SmallBitVector> RegUses;
+  typedef std::map<MachineInstr*, std::set<int>> RegUses;
 
   static char ID;
 
   RegUses UseIns, UseOuts;
+  const TargetRegisterInfo *tri;
+  const TargetInstrInfo *tii;
+  std::vector<MachineBasicBlock*> reverseOrderSequences;
 
   RegisterUsesCollector() : MachineFunctionPass(ID) {}
 
@@ -65,16 +67,18 @@ private:
                 std::set<MachineBasicBlock*> &visited);
 
   void computeLocalDefUses(MachineInstr* mi,
-                           SmallBitVector& defs,
-                           SmallBitVector &uses);
+                           std::set<int>& defs,
+                           std::set<int> &uses);
   /**
    * performs intersect operation over lhs and rhs. Stores result
    * into lhs.
    * @param lhs
    * @param rhs
    */
-  void intersect(SmallBitVector &res, SmallBitVector &lhs, SmallBitVector &rhs);
-  void Union(SmallBitVector &res, SmallBitVector &lhs, SmallBitVector &rhs);
+  void intersect(std::set<int> &res, std::set<int> &lhs, std::set<int> &rhs);
+  void Union(std::set<int> &res, std::set<int> &lhs, std::set<int> &rhs);
+  void dump();
+  void printSet(MachineInstr*, std::set<int>&);
 };
 }
 

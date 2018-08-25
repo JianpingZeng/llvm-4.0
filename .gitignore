@@ -72,6 +72,7 @@ bindings/go/llvm/llvm_config.go
 bindings/go/llvm/workdir
 
 # Ignores all build and project configuration files.
+cmake-build-debug
 cmake-release-build
 cmake-debug-build
 .idea
