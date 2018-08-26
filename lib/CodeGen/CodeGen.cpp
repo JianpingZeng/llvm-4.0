@@ -91,6 +91,8 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeVirtRegMapPass(Registry);
   initializeVirtRegRewriterPass(Registry);
   initializeWinEHPreparePass(Registry);
+  // Added by Jianping Zeng on 8/26/2018
+  initializeRegisterRenamingIdemPass(Registry);
 }
 
 void LLVMInitializeCodeGen(LLVMPassRegistryRef R) {
