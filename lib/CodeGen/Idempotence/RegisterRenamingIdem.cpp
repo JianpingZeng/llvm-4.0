@@ -13,8 +13,9 @@
 #include <llvm/CodeGen/Passes.h>
 #include <llvm/CodeGen/Idempotence/RegisterUsesCollector.h>
 #include <llvm/Target/TargetSubtargetInfo.h>
-
+#include <llvm/CodeGen/MachineRegisterInfo.h>
 #include <vector>
+#include <map>
 
 using namespace llvm;
 
@@ -23,6 +24,7 @@ class RegisterRenamingIdem : public MachineFunctionPass {
 public:
   static char ID;
   RegisterUsesCollector *regUses;
+  std::map<int, int> old2NewRegsMap;
   RegisterRenamingIdem() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "Register renaming for Idempotence"; }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -91,22 +93,23 @@ bool RegisterRenamingIdem::renameRegsOverMI(MachineInstr *mi, MachineInstr* prev
   if (usesIn.empty()) return false;
   // checks if the defined register was used by previous uses.
   unsigned reg = 0;
-  MachineOperand *mo;
+  int opIdx = -1;
   // finds defined register for mi.
   for (unsigned i = 0, e = mi->getNumOperands(); i < e; ++i) {
     auto op = mi->getOperand(i);
     if (op.isReg() && op.getReg() && op.isDef()) {
       reg = op.getReg();
-      mo = &op;
+      opIdx = i;
       break;
     }
   }
-  assert(reg != 0 && "no defined register for mi?");
+  if (!reg) return false;
   assert(TargetRegisterInfo::isPhysicalRegister(reg) && "should run this pass after RA!");
+  assert(opIdx >= 0 && mi->getOperand(opIdx).isReg() && "must be register operand!");
 
   // checks if we should rename defined register of current mi.
   if (shouldRenameDefReg(reg, usesIn)) {
-    const TargetRegisterClass *rc = tri->getRegClass(reg);
+    const TargetRegisterClass *rc = tri->getMinimalPhysRegClass(reg);
     BitVector allocatable = tri->getAllocatableSet(*mf, rc);
     int newReg = 0;
     for (int idx = allocatable.find_first(); idx >= 0; idx = allocatable.find_next(idx)) {
@@ -116,7 +119,8 @@ bool RegisterRenamingIdem::renameRegsOverMI(MachineInstr *mi, MachineInstr* prev
       }
     }
     assert(newReg != 0 && "no free physical register for renaming");
-    mo->setReg(newReg);
+    mi->getOperand(opIdx).setReg(newReg);
+    old2NewRegsMap[reg] = newReg;
 
     // update subsequent instructions which uses the old reg.
     updateUsedRegBy(mi, reg, newReg);
@@ -134,7 +138,7 @@ bool RegisterRenamingIdem::shouldRenameDefReg(int defReg,
 #ifdef NDEBUG
   for (int reg : usesIn)
     assert(TargetRegisterInfo::isPhysicalRegister(reg) && "should run this pass after RA!");
-#endif NDEBUG
+#endif
 
   return usesIn.find(defReg) != usesIn.end();
 }
@@ -149,19 +153,44 @@ void RegisterRenamingIdem::updateUsedRegBy(MachineInstr *mi,
   // We just visit those instructions after mi by iterate over seqs list.
   // Because reverse post-order ensure that def before use in seqs list.
   MachineBasicBlock *mbb = mi->getParent();
-  assert(mbb != nullptr);
+  assert(mbb && "mbb must not be null!");
   auto pos = std::find(seqs.begin(), seqs.end(), mbb);
   if (pos == seqs.end()) return;
+  MachineBasicBlock::iterator itr(mi);
+  ++itr;
+  for (; itr != mbb->end(); ++itr)
+    for (unsigned i = itr->getNumOperands(); i > 0; --i) {
+      if (itr->getOperand(i-1).isReg() &&
+          itr->getOperand(i-1).getReg() == oldReg) {
+        if (itr->getOperand(i-1).isUse())
+          itr->getOperand(i-1).setReg(newReg);
+        else {
+          // When a definition for this reg was seen, it indicates a redef, so
+          // renaming over following instructions is not needed.
+          return;
+        }
+      }
+    }
+
+  ++pos;
   while (pos != seqs.end()) {
     auto itr = (*pos)->begin();
     auto end = (*pos)->end();
     for (; itr !=end; ++itr) {
-      for (unsigned i = 0, e = itr->getNumOperands(); i < e; ++i) {
-        auto op = itr->getOperand(i);
-        if (op.isUse() && op.isReg() && op.getReg() == oldReg)
-          op.setReg(newReg);
+      for (unsigned i = itr->getNumOperands(); i > 0; --i) {
+        if (itr->getOperand(i-1).isReg() &&
+            itr->getOperand(i-1).getReg() == oldReg) {
+            if (itr->getOperand(i-1).isUse())
+              itr->getOperand(i-1).setReg(newReg);
+            else {
+              // When a definition for this reg was seen, it indicates a redef, so
+              // renaming over following instructions is not needed.
+              return;
+            }
+        }
       }
     }
+    ++pos;
   }
 }
 
