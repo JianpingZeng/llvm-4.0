@@ -33,7 +33,6 @@ namespace llvm {
 class RegisterUsesCollector : public MachineFunctionPass {
 public:
   typedef std::map<MachineInstr*, std::set<int>> RegUses;
-
   static char ID;
 
   RegUses UseIns, UseOuts;
@@ -55,8 +54,7 @@ public:
 
   bool isPhyRegUsedBeforeMI(MachineInstr *mi,
                             int phyReg,
-                            VirtRegMap *vrm,
-                            const TargetRegisterInfo *tri);
+                            VirtRegMap *vrm);
 
 private:
   void reversePostOrder(MachineBasicBlock* entry,

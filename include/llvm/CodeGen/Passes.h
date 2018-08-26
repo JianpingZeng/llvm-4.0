@@ -141,9 +141,11 @@ namespace llvm {
   /// This pass adds dead/undef flags after analyzing subregister lanes.
   extern char &DetectDeadLanesID;
 
-  /// This pass collects register use information for each machine instruction
-  /// on RegAlloca.
+  /// This pass collects register uses information for previous MIs.
   extern char &RegisterUseCollectorID;
+
+  /// This pass will rename those register violate anti-dependence.
+  extern char &RegisterRenamingIdemID;
 
   /// FastRegisterAllocation Pass - This pass register allocates as fast as
   /// possible. It is best suited for debug code where live ranges are short.
@@ -401,6 +403,8 @@ namespace llvm {
 
   /// This pass frees the memory occupied by the MachineFunction.
   FunctionPass *createFreeMachineFunctionPass();
+  /// This pass for renaming register.
+  FunctionPass *createRegisterRenamingPass();
 } // End llvm namespace
 
 /// Target machine pass initializer for passes with dependencies. Use with

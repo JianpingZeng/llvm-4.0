@@ -123,7 +123,7 @@ protected:
     for (; itr != end; ++itr) {
       VNInfo *vi = *itr;
       MachineInstr *mi = LIS->getInstructionFromIndex(vi->def.getBaseIndex());
-      if (mi != nullptr && regUsesCollector->isPhyRegUsedBeforeMI(mi, phyReg, VRM, TRI))
+      if (mi != nullptr && regUsesCollector->isPhyRegUsedBeforeMI(mi, phyReg, VRM))
         return true;
     }
     return false;

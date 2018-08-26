@@ -610,6 +610,8 @@ void TargetPassConfig::addMachinePasses() {
   else
     addFastRegAlloc(createRegAllocPass(false));
 
+  // Jianping Zeng on 8/25/2018.
+  addPass(createRegisterRenamingPass());
   // Run post-ra passes.
   addPostRegAlloc();
 

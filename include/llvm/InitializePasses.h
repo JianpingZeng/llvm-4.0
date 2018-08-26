@@ -358,6 +358,7 @@ void initializeWriteBitcodePassPass(PassRegistry &);
 void initializeWriteThinLTOBitcodePass(PassRegistry &);
 void initializeXRayInstrumentationPass(PassRegistry &);
 void initializeRegisterUsesCollectorPass(PassRegistry &);
+void initializeRegisterRenamingIdemPass(PassRegistry &);
 }
 
 #endif

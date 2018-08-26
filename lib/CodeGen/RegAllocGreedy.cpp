@@ -440,7 +440,7 @@ INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
 INITIALIZE_PASS_DEPENDENCY(SpillPlacement)
-INITIALIZE_PASS_DEPENDENCY(RegisterUsesCollector)
+//INITIALIZE_PASS_DEPENDENCY(RegisterUsesCollector)
 INITIALIZE_PASS_END(RAGreedy, "greedy",
                 "Greedy Register Allocator", false, false)
 
@@ -492,7 +492,7 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveRegMatrix>();
   AU.addRequired<EdgeBundles>();
   AU.addRequired<SpillPlacement>();
-  AU.addRequired<RegisterUsesCollector>();
+  //AU.addRequired<RegisterUsesCollector>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -633,6 +633,14 @@ unsigned RAGreedy::tryAssign(LiveInterval &VirtReg,
   while ((PhysReg = Order.next()))
     if (!Matrix->checkInterference(VirtReg, PhysReg))
       break;
+
+#ifdef IDEMPOTENCE
+  // Commented by Jianping Zeng on 8/23/2018
+  if (constraintOnAntiDep(PhysReg, VirtReg)) {
+    llvm::outs()<<"Can't allocate a physical caused by anti-dep.\n";
+    return 0;
+  }
+#endif
   if (!PhysReg || Order.isHint())
     return PhysReg;
 
@@ -2280,15 +2288,6 @@ unsigned RAGreedy::selectOrSplit(LiveInterval &VirtReg,
                     "depth for recoloring reached. Use "
                     "-fexhaustive-register-search to skip cutoffs");
   }
-
-#define IDEMPOTENCE
-#ifdef IDEMPOTENCE
-  // Commented by Jianping Zeng on 8/23/2018
-  if (constraintOnAntiDep(Reg, VirtReg)) {
-    llvm::outs()<<"Can't allocate a physical caused by anti-dep.\n";
-    Reg = 0;
-  }
-#endif
   return Reg;
 }
 
@@ -2651,6 +2650,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   SpillPlacer = &getAnalysis<SpillPlacement>();
   DebugVars = &getAnalysis<LiveDebugVariables>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  //regUsesCollector = &getAnalysis<RegisterUsesCollector>();
 
   initializeCSRCost();
 

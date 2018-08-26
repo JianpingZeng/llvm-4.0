@@ -14,9 +14,8 @@
 
 #define  DEBUG_TYPE "idem"
 #include <llvm/CodeGen/Passes.h>
-#include <llvm/PassSupport.h>
+#include <llvm/Pass.h>
 #include <llvm/CodeGen/MachineFunctionPass.h>
-#include <llvm/ADT/SmallBitVector.h>
 #include <set>
 #include <map>
 #include <vector>
@@ -98,7 +97,7 @@ bool RegisterUsesCollector::runOnMachineFunction(llvm::MachineFunction &MF) {
     }
   }
   // prints generated register uses information for debugging.
-  dump();
+  DEBUG(dump());
   return false;
 }
 
@@ -210,13 +209,11 @@ void RegisterUsesCollector::Union(std::set<int> &res,
  */
 bool RegisterUsesCollector::isPhyRegUsedBeforeMI(MachineInstr *mi,
                                                  int phyReg,
-                                                 VirtRegMap *vrm,
-                                                 const TargetRegisterInfo *tri) {
+                                                 VirtRegMap *vrm) {
   assert(TargetRegisterInfo::isPhysicalRegister(phyReg) && "must be physical register");
-
-  if (UseIns[mi].empty())
+  if (!UseIns.count(mi))
     return false;
-  std::set<int> &useIns = UseIns[mi];
+  std::set<int> useIns = UseIns[mi];
   for(int idx : useIns) {
     int reg = TargetRegisterInfo::isVirtualRegister(idx) ? vrm->getPhys(idx) : idx;
     if (reg == phyReg) return true;
