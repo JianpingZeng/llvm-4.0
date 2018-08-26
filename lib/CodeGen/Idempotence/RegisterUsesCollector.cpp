@@ -53,47 +53,10 @@ bool RegisterUsesCollector::runOnMachineFunction(llvm::MachineFunction &MF) {
     // Dataflow equation as follows.
     // UseIn = U(UseOut_pred) U localUses
     // UseOut = UseIn - localDefs.
-    std::set<int> localUses, localDefs;
-    computeLocalDefUses(&*mi, localDefs, localUses);
-
-    // Specially handle first instr.
-    if (mbb->pred_empty()) {
-      // UseIn = localUses
-      // UseOut = UseIn - localDefs.
-      UseIns[&*mi] = localUses;
-      intersect(UseOuts[&*mi], localUses, localDefs);
-    }
-    else {
-      // set up UseIn for current machine instr.
-      std::set<int> &useIn = UseIns[&*mi];
-      auto pred = mbb->pred_begin();
-      auto end = mbb->pred_end();
-      MachineInstr* last = &*(*pred)->getLastNonDebugInstr();
-      Union(useIn, useIn, UseOuts[last]);
-      ++pred;
-      for (; pred != end; ++pred) {
-        last = &*(*pred)->getLastNonDebugInstr();
-        Union(useIn, useIn, UseOuts[last]);
-      }
-      Union(useIn, useIn, localUses);
-
-      // setup UseOut for mi.
-      std::set<int> &useOut = UseOuts[&*mi];
-      intersect(useOut, useIn, localDefs);
-    }
-
-    auto prev = mi;
-    ++mi;
+    MachineInstr * prev = 0;
     for (; mi != end; ++mi) {
-      localDefs.clear();
-      localUses.clear();
-      computeLocalDefUses(&*mi, localDefs, localUses);
-      // UseIn = U(UseOut_pred) U localUses
-      // UseOut = UseIn - localDefs.
-      std::set<int> &useIn = UseIns[&*mi];
-      Union(useIn, UseOuts[&*prev], localUses);
-      intersect(UseOuts[&*mi], useIn, localDefs);
-      prev = mi;
+      computeRegUsesInfo(&*mi, prev);
+      prev = &*mi;
     }
   }
   // prints generated register uses information for debugging.
@@ -187,6 +150,12 @@ void RegisterUsesCollector::computeLocalDefUses(MachineInstr* mi,
 void RegisterUsesCollector::intersect(std::set<int> &res,
                                      std::set<int> &lhs,
                                      std::set<int> &rhs) {
+  if (rhs.size() == 1) {
+    res.insert(lhs.begin(), lhs.end());
+    res.erase(*rhs.begin());
+    return;
+  }
+
   for (int reg : lhs)
     if (!rhs.count(reg))
       res.insert(reg);
@@ -219,4 +188,54 @@ bool RegisterUsesCollector::isPhyRegUsedBeforeMI(MachineInstr *mi,
     if (reg == phyReg) return true;
   }
   return false;
+}
+
+void RegisterUsesCollector::computeRegUsesInfo(MachineInstr *mi, MachineInstr* prev) {
+  MachineBasicBlock *mbb = mi->getParent();
+
+  // Dataflow equation as follows.
+  // UseIn = U(UseOut_pred) U localUses
+  // UseOut = UseIn - localDefs.
+  std::set<int> localUses, localDefs;
+  computeLocalDefUses(&*mi, localDefs, localUses);
+
+  // Specially handle first instr.
+  if (mi == &mbb->front() && mbb->pred_empty()) {
+    // UseIn = localUses
+    // UseOut = UseIn - localDefs.
+    UseIns[&*mi] = localUses;
+    intersect(UseOuts[&*mi], localUses, localDefs);
+  }
+  else if (!mbb->pred_empty()){
+    // set up UseIn for current machine instr.
+    std::set<int> &useIn = UseIns[&*mi];
+    auto pred = mbb->pred_begin();
+    auto end = mbb->pred_end();
+    MachineInstr* last = &*(*pred)->getLastNonDebugInstr();
+    Union(useIn, useIn, UseOuts[last]);
+    ++pred;
+    for (; pred != end; ++pred) {
+      last = &*(*pred)->getLastNonDebugInstr();
+      Union(useIn, useIn, UseOuts[last]);
+    }
+    Union(useIn, useIn, localUses);
+
+    // setup UseOut for mi.
+    std::set<int> &useOut = UseOuts[&*mi];
+    intersect(useOut, useIn, localDefs);
+  }
+  else {
+    computeLocalDefUses(&*mi, localDefs, localUses);
+    // UseIn = U(UseOut_pred) U localUses
+    // UseOut = UseIn - localDefs.
+    std::set<int> &useIn = UseIns[&*mi];
+    Union(useIn, UseOuts[&*prev], localUses);
+    intersect(UseOuts[&*mi], useIn, localDefs);
+  }
+}
+
+void RegisterUsesCollector::addRegDef(MachineInstr *mi, unsigned newDefReg) {
+  std::set<int> useIn = UseIns[mi];
+  useIn.erase(newDefReg);
+  UseOuts[mi] = useIn;
 }

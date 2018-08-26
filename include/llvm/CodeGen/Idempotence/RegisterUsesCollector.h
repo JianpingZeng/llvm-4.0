@@ -56,14 +56,17 @@ public:
                             int phyReg,
                             VirtRegMap *vrm);
 
-private:
-  void reversePostOrder(MachineBasicBlock* entry,
-                        std::vector<MachineBasicBlock*> &res);
+  void computeRegUsesInfo(MachineInstr *mi, MachineInstr* prev);
+  void addRegDef(MachineInstr *mi, unsigned newDefReg);
 
-  void traverse(MachineBasicBlock* entry,
+  static void reversePostOrder(MachineBasicBlock* entry,
+                        std::vector<MachineBasicBlock*> &res);
+private:
+  static void traverse(MachineBasicBlock* entry,
                 std::vector<MachineBasicBlock*> &res,
                 std::set<MachineBasicBlock*> &visited);
 
+private:
   void computeLocalDefUses(MachineInstr* mi,
                            std::set<int>& defs,
                            std::set<int> &uses);
